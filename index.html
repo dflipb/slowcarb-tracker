@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4HB Tracker</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --panel2: #20242e;
+    --accent: #4dd0e1;
+    --good: #66bb6a;
+    --bad: #ef5350;
+    --text: #e6e8eb;
+    --muted: #8a8f98;
+    --border: #2a2f3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 60px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header h1 span { color: var(--accent); }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    position: sticky;
+    top: 49px;
+    z-index: 9;
+  }
+  .tab {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab.active {
+    background: var(--panel2);
+    color: var(--accent);
+  }
+  main { padding: 16px; max-width: 720px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 15px;
+    margin: 0 0 12px 0;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .field-row label {
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+  .field-row input {
+    width: 110px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 15px;
+    text-align: right;
+  }
+  .field-row input:focus { outline: 1px solid var(--accent); }
+  .full-row input {
+    width: 100%;
+    text-align: left;
+  }
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #06262b;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn.secondary {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.danger {
+    background: var(--bad);
+    color: #fff;
+  }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-row .btn { margin-top: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 8px 6px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .diff-pos { color: var(--bad); }
+  .diff-neg { color: var(--good); }
+  .table-wrap { overflow-x: auto; }
+  tr.entry-row { cursor: pointer; }
+  tr.entry-row:active { background: var(--panel2); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .stat {
+    background: var(--panel2);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .stat .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat .value { font-size: 20px; font-weight: 600; }
+  .stat .delta { font-size: 12px; margin-top: 2px; }
+
+  .meal-day {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .meal-day-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .meal-day-head .date { font-weight: 600; font-size: 14px; }
+  .cheat-toggle {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .cheat-toggle.on {
+    background: #5d3a1a;
+    color: #ffb74d;
+    border-color: #ffb74d;
+  }
+  .meal-list { list-style: none; margin: 0; padding: 0; }
+  .meal-list li {
+    font-size: 13px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .meal-list li:last-child { border-bottom: none; }
+  .meal-list .del {
+    color: var(--bad);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .add-meal-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .add-meal-row input {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .add-meal-row select {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .add-meal-row button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #06262b;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 20px 0;
+  }
+
+  .unit-toggle {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal h2 { margin-top: 0; }
+  .modal-close {
+    text-align: center;
+    padding: 12px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>4<span>HB</span> Tracker</h1>
+  <button class="unit-toggle" id="unitToggle">lb / in</button>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="log">Log Entry</button>
+  <button class="tab" data-tab="history">History</button>
+  <button class="tab" data-tab="meals">Meals</button>
+  <button class="tab" data-tab="stats">Stats</button>
+</div>
+
+<main>
+
+  <!-- LOG ENTRY -->
+  <section class="section active" id="section-log">
+    <div class="card">
+      <h2>New Measurement Entry</h2>
+      <div class="field-row">
+        <label for="entryDate">Date</label>
+        <input type="date" id="entryDate" style="width:160px;">
+      </div>
+      <div class="field-row">
+        <label for="weight">Weight (<span class="wt-unit">lb</span>)</label>
+        <input type="number" step="0.1" id="weight" placeholder="0.0">
+      </div>
+      <div class="field-row">
+        <label for="bodyfat">Body fat %</label>
+        <input type="number" step="0.1" id="bodyfat" placeholder="optional">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Measurements (<span class="ms-unit">in</span>)</h2>
+      <div class="field-row"><label for="m_neck">Neck</label><input type="number" step="0.1" id="m_neck"></div>
+      <div class="field-row"><label for="m_chest">Chest</label><input type="number" step="0.1" id="m_chest"></div>
+      <div class="field-row"><label for="m_waist">Waist (navel)</label><input type="number" step="0.1" id="m_waist"></div>
+      <div class="field-row"><label for="m_hips">Hips</label><input type="number" step="0.1" id="m_hips"></div>
+      <div class="field-row"><label for="m_thigh">Thigh (R)</label><input type="number" step="0.1" id="m_thigh"></div>
+      <div class="field-row"><label for="m_calf">Calf (R)</label><input type="number" step="0.1" id="m_calf"></div>
+      <div class="field-row"><label for="m_arm">Arm (R, flexed)</label><input type="number" step="0.1" id="m_arm"></div>
+    </div>
+
+    <div class="card">
+      <h2>Notes</h2>
+      <div class="field-row full-row">
+        <input type="text" id="entryNotes" placeholder="e.g. PAGG, training notes...">
+      </div>
+    </div>
+
+    <button class="btn" id="saveEntryBtn">Save Entry</button>
+    <div class="btn-row">
+      <button class="btn secondary" id="clearFormBtn">Clear Form</button>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="section" id="section-history">
+    <div class="card">
+      <h2>Weight Trend</h2>
+      <div id="weightChart"></div>
+    </div>
+    <div class="card">
+      <h2>All Entries</h2>
+      <div class="table-wrap">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Weight</th>
+              <th>Δ</th>
+              <th>Waist</th>
+              <th>BF%</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="empty" id="historyEmpty">No entries yet. Add one from the Log Entry tab.</div>
+    </div>
+  </section>
+
+  <!-- MEALS -->
+  <section class="section" id="section-meals">
+    <div class="card">
+      <h2>Add Meal</h2>
+      <div class="field-row">
+        <label for="mealDate">Date</label>
+        <input type="date" id="mealDate" style="width:160px;">
+      </div>
+      <div class="add-meal-row">
+        <input type="text" id="mealDesc" placeholder="e.g. Eggs, black beans, spinach">
+        <select id="mealType">
+          <option value="meal">Meal</option>
+          <option value="cheat">Cheat item</option>
+        </select>
+        <button id="addMealBtn">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Meal Log</h2>
+      <div id="mealLog"></div>
+      <div class="empty" id="mealsEmpty">No meals logged yet.</div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="section" id="section-stats">
+    <div class="card">
+      <h2>Overview</h2>
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+    <div class="card">
+      <h2>Data Management</h2>
+      <div class="btn-row">
+        <button class="btn secondary" id="exportBtn">Export JSON</button>
+        <button class="btn secondary" id="importBtn">Import JSON</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <div class="btn-row">
+        <button class="btn danger" id="resetBtn">Reset All Data</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Entry detail modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>Entry Detail</h2>
+    <div id="modalBody"></div>
+    <div class="btn-row">
+      <button class="btn danger" id="deleteEntryBtn">Delete Entry</button>
+    </div>
+    <div class="modal-close" id="modalClose">Close</div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = '4hb_tracker_data';
+const UNIT_KEY = '4hb_tracker_units';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { entries: [], meals: {} };
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+let data = loadData();
+
+// Units: 'imperial' (lb/in) or 'metric' (kg/cm)
+let units = localStorage.getItem(UNIT_KEY) || 'imperial';
+
+function updateUnitLabels() {
+  document.querySelectorAll('.wt-unit').forEach(el => el.textContent = units === 'imperial' ? 'lb' : 'kg');
+  document.querySelectorAll('.ms-unit').forEach(el => el.textContent = units === 'imperial' ? 'in' : 'cm');
+  document.getElementById('unitToggle').textContent = units === 'imperial' ? 'lb / in' : 'kg / cm';
+}
+document.getElementById('unitToggle').addEventListener('click', () => {
+  units = units === 'imperial' ? 'metric' : 'imperial';
+  localStorage.setItem(UNIT_KEY, units);
+  updateUnitLabels();
+  renderHistory();
+  renderStats();
+});
+updateUnitLabels();
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('section-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'history') renderHistory();
+    if (tab.dataset.tab === 'meals') renderMeals();
+    if (tab.dataset.tab === 'stats') renderStats();
+  });
+});
+
+// Default dates to today
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+document.getElementById('entryDate').value = todayStr();
+document.getElementById('mealDate').value = todayStr();
+
+// --- Entry form ---
+const fields = ['weight','bodyfat','m_neck','m_chest','m_waist','m_hips','m_thigh','m_calf','m_arm'];
+
+document.getElementById('clearFormBtn').addEventListener('click', () => {
+  fields.forEach(f => document.getElementById(f).value = '');
+  document.getElementById('entryNotes').value = '';
+});
+
+document.getElementById('saveEntryBtn').addEventListener('click', () => {
+  const date = document.getElementById('entryDate').value;
+  if (!date) { alert('Please pick a date'); return; }
+
+  const entry = { date };
+  fields.forEach(f => {
+    const v = document.getElementById(f).value;
+    if (v !== '') entry[f] = parseFloat(v);
+  });
+  const notes = document.getElementById('entryNotes').value.trim();
+  if (notes) entry.notes = notes;
+
+  if (entry.weight === undefined) {
+    alert('Weight is required');
+    return;
+  }
+
+  // Replace existing entry for that date, or insert
+  const existingIdx = data.entries.findIndex(e => e.date === date);
+  if (existingIdx >= 0) {
+    data.entries[existingIdx] = entry;
+  } else {
+    data.entries.push(entry);
+  }
+  data.entries.sort((a,b) => a.date.localeCompare(b.date));
+  saveData();
+
+  fields.forEach(f => document.getElementById(f).value = '');
+  document.getElementById('entryNotes').value = '';
+  document.getElementById('entryDate').value = todayStr();
+
+  alert('Entry saved for ' + date);
+});
+
+// --- History ---
+function fmtDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function convWeight(lb) { return units === 'imperial' ? lb : lb * 0.453592; }
+function convLen(inch) { return units === 'imperial' ? inch : inch * 2.54; }
+function wUnit() { return units === 'imperial' ? 'lb' : 'kg'; }
+function lUnit() { return units === 'imperial' ? 'in' : 'cm'; }
+
+function renderHistory() {
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = '';
+  const empty = document.getElementById('historyEmpty');
+
+  if (data.entries.length === 0) {
+    empty.style.display = 'block';
+    document.getElementById('weightChart').innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const sorted = [...data.entries].sort((a,b) => b.date.localeCompare(a.date)); // newest first
+  sorted.forEach((entry, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'entry-row';
+    tr.dataset.date = entry.date;
+
+    // diff vs previous chronological entry
+    const chronIdx = data.entries.findIndex(e => e.date === entry.date);
+    let diffHtml = '–';
+    if (chronIdx > 0 && entry.weight !== undefined && data.entries[chronIdx-1].weight !== undefined) {
+      const diff = entry.weight - data.entries[chronIdx-1].weight;
+      const dispDiff = convWeight(diff);
+      const cls = diff > 0 ? 'diff-pos' : (diff < 0 ? 'diff-neg' : '');
+      const sign = diff > 0 ? '+' : '';
+      diffHtml = `<span class="${cls}">${sign}${dispDiff.toFixed(1)}</span>`;
+    }
+
+    const wt = entry.weight !== undefined ? convWeight(entry.weight).toFixed(1) + ' ' + wUnit() : '–';
+    const waist = entry.m_waist !== undefined ? convLen(entry.m_waist).toFixed(1) + ' ' + lUnit() : '–';
+    const bf = entry.bodyfat !== undefined ? entry.bodyfat.toFixed(1) + '%' : '–';
+
+    tr.innerHTML = `<td>${fmtDate(entry.date)}</td><td>${wt}</td><td>${diffHtml}</td><td>${waist}</td><td>${bf}</td>`;
+    tr.addEventListener('click', () => openEntryModal(entry.date));
+    tbody.appendChild(tr);
+  });
+
+  renderChart();
+}
+
+function renderChart() {
+  const container = document.getElementById('weightChart');
+  const withWeight = data.entries.filter(e => e.weight !== undefined);
+  if (withWeight.length < 2) {
+    container.innerHTML = '<div class="empty">Add at least 2 entries to see a trend chart.</div>';
+    return;
+  }
+  const w = 100; // percent-based via viewBox
+  const h = 160;
+  const weights = withWeight.map(e => convWeight(e.weight));
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+  const range = (max - min) || 1;
+  const pad = 10;
+
+  const points = withWeight.map((e, i) => {
+    const x = pad + (i / (withWeight.length - 1)) * (300 - pad*2);
+    const y = h - pad - ((convWeight(e.weight) - min) / range) * (h - pad*2);
+    return `${x},${y}`;
+  });
+
+  const path = 'M' + points.join(' L');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 300 ${h}" style="width:100%; height:160px;">
+      <polyline points="${points.join(' ')}" fill="none" stroke="#4dd0e1" stroke-width="2"/>
+      ${points.map(p => {
+        const [x,y] = p.split(',');
+        return `<circle cx="${x}" cy="${y}" r="2.5" fill="#4dd0e1"/>`;
+      }).join('')}
+    </svg>
+    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+      <span>${fmtDate(withWeight[0].date)} · ${convWeight(withWeight[0].weight).toFixed(1)} ${wUnit()}</span>
+      <span>${fmtDate(withWeight[withWeight.length-1].date)} · ${convWeight(withWeight[withWeight.length-1].weight).toFixed(1)} ${wUnit()}</span>
+    </div>
+  `;
+}
+
+// --- Entry detail modal ---
+let modalDate = null;
+function openEntryModal(date) {
+  const entry = data.entries.find(e => e.date === date);
+  if (!entry) return;
+  modalDate = date;
+
+  const rows = [];
+  rows.push(['Date', fmtDate(entry.date)]);
+  if (entry.weight !== undefined) rows.push(['Weight', convWeight(entry.weight).toFixed(1) + ' ' + wUnit()]);
+  if (entry.bodyfat !== undefined) rows.push(['Body fat', entry.bodyfat.toFixed(1) + '%']);
+  const measureLabels = { m_neck:'Neck', m_chest:'Chest', m_waist:'Waist', m_hips:'Hips', m_thigh:'Thigh', m_calf:'Calf', m_arm:'Arm' };
+  Object.entries(measureLabels).forEach(([key,label]) => {
+    if (entry[key] !== undefined) rows.push([label, convLen(entry[key]).toFixed(1) + ' ' + lUnit()]);
+  });
+  if (entry.notes) rows.push(['Notes', entry.notes]);
+
+  document.getElementById('modalBody').innerHTML = `
+    <table style="width:100%;">
+      ${rows.map(([k,v]) => `<tr><td style="text-align:left; color:var(--muted);">${k}</td><td>${v}</td></tr>`).join('')}
+    </table>
+  `;
+  document.getElementById('modalBg').classList.add('open');
+}
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modalBg').classList.remove('open');
+});
+document.getElementById('modalBg').addEventListener('click', (e) => {
+  if (e.target.id === 'modalBg') document.getElementById('modalBg').classList.remove('open');
+});
+document.getElementById('deleteEntryBtn').addEventListener('click', () => {
+  if (!modalDate) return;
+  if (!confirm('Delete entry for ' + fmtDate(modalDate) + '?')) return;
+  data.entries = data.entries.filter(e => e.date !== modalDate);
+  saveData();
+  document.getElementById('modalBg').classList.remove('open');
+  renderHistory();
+  renderStats();
+});
+
+// --- Meals ---
+document.getElementById('addMealBtn').addEventListener('click', () => {
+  const date = document.getElementById('mealDate').value;
+  const desc = document.getElementById('mealDesc').value.trim();
+  const type = document.getElementById('mealType').value;
+  if (!date || !desc) { alert('Enter a date and description'); return; }
+
+  if (!data.meals[date]) data.meals[date] = { cheatDay: false, items: [] };
+  data.meals[date].items.push({ desc, type });
+  if (type === 'cheat') data.meals[date].cheatDay = true;
+  saveData();
+  document.getElementById('mealDesc').value = '';
+  renderMeals();
+});
+
+function toggleCheatDay(date) {
+  if (!data.meals[date]) data.meals[date] = { cheatDay: false, items: [] };
+  data.meals[date].cheatDay = !data.meals[date].cheatDay;
+  saveData();
+  renderMeals();
+}
+
+function deleteMealItem(date, idx) {
+  data.meals[date].items.splice(idx, 1);
+  if (data.meals[date].items.length === 0 && !data.meals[date].cheatDay) {
+    delete data.meals[date];
+  }
+  saveData();
+  renderMeals();
+}
+
+function renderMeals() {
+  const container = document.getElementById('mealLog');
+  const empty = document.getElementById('mealsEmpty');
+  const dates = Object.keys(data.meals).sort((a,b) => b.localeCompare(a));
+
+  if (dates.length === 0) {
+    container.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  container.innerHTML = dates.map(date => {
+    const day = data.meals[date];
+    const items = day.items.map((item, idx) => `
+      <li>
+        <span>${item.type === 'cheat' ? '🍩 ' : ''}${escapeHtml(item.desc)}</span>
+        <span class="del" data-date="${date}" data-idx="${idx}">×</span>
+      </li>
+    `).join('');
+    return `
+      <div class="meal-day">
+        <div class="meal-day-head">
+          <span class="date">${fmtDate(date)}</span>
+          <button class="cheat-toggle ${day.cheatDay ? 'on' : ''}" data-date="${date}">${day.cheatDay ? 'Cheat Day ✓' : 'Mark Cheat Day'}</button>
+        </div>
+        <ul class="meal-list">${items || '<li style="color:var(--muted);">No items</li>'}</ul>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.cheat-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleCheatDay(btn.dataset.date));
+  });
+  container.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => deleteMealItem(btn.dataset.date, parseInt(btn.dataset.idx)));
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// --- Stats ---
+function renderStats() {
+  const grid = document.getElementById('statGrid');
+  const entries = [...data.entries].sort((a,b) => a.date.localeCompare(b.date));
+  const withWeight = entries.filter(e => e.weight !== undefined);
+
+  const stats = [];
+
+  if (withWeight.length > 0) {
+    const latest = withWeight[withWeight.length - 1];
+    stats.push({ label: 'Current Weight', value: convWeight(latest.weight).toFixed(1) + ' ' + wUnit(), delta: '' });
+
+    const first = withWeight[0];
+    const totalChange = latest.weight - first.weight;
+    stats.push({
+      label: 'Total Change',
+      value: (totalChange >= 0 ? '+' : '') + convWeight(totalChange).toFixed(1) + ' ' + wUnit(),
+      delta: 'since ' + fmtDate(first.date),
+      cls: totalChange > 0 ? 'diff-pos' : (totalChange < 0 ? 'diff-neg' : '')
+    });
+
+    if (withWeight.length >= 2) {
+      const prev = withWeight[withWeight.length - 2];
+      const change = latest.weight - prev.weight;
+      stats.push({
+        label: 'Last Change',
+        value: (change >= 0 ? '+' : '') + convWeight(change).toFixed(1) + ' ' + wUnit(),
+        delta: 'since ' + fmtDate(prev.date),
+        cls: change > 0 ? 'diff-pos' : (change < 0 ? 'diff-neg' : '')
+      });
+    }
+
+    // 7-day rate
+    const oneWeekAgo = new Date(latest.date + 'T00:00:00');
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekStr = oneWeekAgo.toISOString().slice(0,10);
+    const weekEntry = [...withWeight].reverse().find(e => e.date <= oneWeekStr);
+    if (weekEntry) {
+      const weekChange = latest.weight - weekEntry.weight;
+      stats.push({
+        label: 'Weekly Rate',
+        value: (weekChange >= 0 ? '+' : '') + convWeight(weekChange).toFixed(1) + ' ' + wUnit(),
+        delta: 'vs ~7 days ago',
+        cls: weekChange > 0 ? 'diff-pos' : (weekChange < 0 ? 'diff-neg' : '')
+      });
+    }
+  }
+
+  // Waist
+  const withWaist = entries.filter(e => e.m_waist !== undefined);
+  if (withWaist.length > 0) {
+    const latestW = withWaist[withWaist.length - 1];
+    stats.push({ label: 'Current Waist', value: convLen(latestW.m_waist).toFixed(1) + ' ' + lUnit(), delta: '' });
+    if (withWaist.length >= 2) {
+      const change = latestW.m_waist - withWaist[0].m_waist;
+      stats.push({
+        label: 'Waist Change',
+        value: (change >= 0 ? '+' : '') + convLen(change).toFixed(1) + ' ' + lUnit(),
+        delta: 'since ' + fmtDate(withWaist[0].date),
+        cls: change > 0 ? 'diff-pos' : (change < 0 ? 'diff-neg' : '')
+      });
+    }
+  }
+
+  // Cheat days count
+  const cheatDays = Object.values(data.meals).filter(d => d.cheatDay).length;
+  stats.push({ label: 'Cheat Days Logged', value: String(cheatDays), delta: '' });
+  stats.push({ label: 'Total Entries', value: String(entries.length), delta: '' });
+
+  if (stats.length === 0) {
+    grid.innerHTML = '<div class="empty">No data yet — add your first entry.</div>';
+    return;
+  }
+
+  grid.innerHTML = stats.map(s => `
+    <div class="stat">
+      <div class="label">${s.label}</div>
+      <div class="value ${s.cls || ''}">${s.value}</div>
+      ${s.delta ? `<div class="delta">${s.delta}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// --- Export / Import / Reset ---
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '4hb-tracker-export-' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const imported = JSON.parse(evt.target.result);
+      if (!imported.entries || !imported.meals) throw new Error('Invalid format');
+      data = imported;
+      saveData();
+      renderHistory();
+      renderMeals();
+      renderStats();
+      alert('Import successful');
+    } catch (err) {
+      alert('Could not import file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('This will permanently delete all entries and meal logs. Continue?')) return;
+  data = { entries: [], meals: {} };
+  saveData();
+  renderHistory();
+  renderMeals();
+  renderStats();
+});
+
+// Init
+renderHistory();
+renderMeals();
+renderStats();
+</script>
+
+</body>
+</html>
