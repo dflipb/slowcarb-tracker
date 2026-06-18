@@ -44,24 +44,27 @@
   .tabs {
     display: flex;
     gap: 4px;
-    padding: 8px 16px;
+    padding: 6px 10px;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
     position: sticky;
     top: 49px;
     z-index: 9;
+    scrollbar-width: none;
   }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    padding: 8px 14px;
+    padding: 8px 12px;
     border-radius: 8px;
     background: transparent;
     color: var(--muted);
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
+    flex-shrink: 0;
   }
   .tab.active {
     background: var(--panel2);
@@ -197,51 +200,66 @@
   }
   .meal-list { list-style: none; margin: 0; padding: 0; }
   .meal-list li {
-    font-size: 13px;
-    padding: 4px 0;
+    font-size: 14px;
+    padding: 10px 0;
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.4;
   }
   .meal-list li:last-child { border-bottom: none; }
   .meal-list .del {
     color: var(--bad);
     cursor: pointer;
-    font-size: 16px;
+    font-size: 20px;
     line-height: 1;
-    padding: 0 4px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    opacity: 0.7;
   }
-  .add-meal-row {
+  .meal-list .del:active { opacity: 1; }
+  .add-meal-stack {
     display: flex;
-    gap: 6px;
-    margin-top: 8px;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
   }
-  .add-meal-row input {
+  .add-meal-stack input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 15px;
+  }
+  .add-meal-stack input[type="text"]:focus { outline: 1px solid var(--accent); }
+  .add-meal-bottom {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .add-meal-bottom select {
     flex: 1;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 12px 10px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--panel2);
     color: var(--text);
     font-size: 14px;
   }
-  .add-meal-row select {
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    color: var(--text);
-    font-size: 13px;
-  }
-  .add-meal-row button {
-    padding: 8px 14px;
-    border-radius: 8px;
+  .add-meal-bottom button {
+    padding: 12px 22px;
+    border-radius: 10px;
     border: none;
     background: var(--accent);
     color: #06262b;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    white-space: nowrap;
   }
 
   .empty {
@@ -299,6 +317,7 @@
 <div class="tabs">
   <button class="tab active" data-tab="log">Log Entry</button>
   <button class="tab" data-tab="history">History</button>
+  <button class="tab" data-tab="measurements">Measurements</button>
   <button class="tab" data-tab="meals">Meals</button>
   <button class="tab" data-tab="stats">Stats</button>
 </div>
@@ -381,19 +400,52 @@
         <label for="mealDate">Date</label>
         <input type="date" id="mealDate" style="width:160px;">
       </div>
-      <div class="add-meal-row">
+      <div class="add-meal-stack">
         <input type="text" id="mealDesc" placeholder="e.g. Eggs, black beans, spinach">
-        <select id="mealType">
-          <option value="meal">Meal</option>
-          <option value="cheat">Cheat item</option>
-        </select>
-        <button id="addMealBtn">Add</button>
+        <div class="add-meal-bottom">
+          <select id="mealType">
+            <option value="meal">🥦 Slow-Carb Meal</option>
+            <option value="cheat">🍩 Cheat Item</option>
+          </select>
+          <button id="addMealBtn">Add</button>
+        </div>
       </div>
     </div>
     <div class="card">
       <h2>Meal Log</h2>
       <div id="mealLog"></div>
       <div class="empty" id="mealsEmpty">No meals logged yet.</div>
+    </div>
+  </section>
+
+  <!-- MEASUREMENTS -->
+  <section class="section" id="section-measurements">
+    <div class="card">
+      <h2>Measurement Trend</h2>
+      <div id="measChart"></div>
+      <div id="measLegend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2>Change From First Entry</h2>
+      <div class="table-wrap">
+        <table id="measDeltaTable">
+          <thead>
+            <tr>
+              <th>Body Part</th>
+              <th>First</th>
+              <th>Latest</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="empty" id="measEmpty">No measurement data yet.</div>
+    </div>
+    <div class="card">
+      <h2>Full History</h2>
+      <div class="table-wrap" id="measHistoryWrap"></div>
+      <div class="empty" id="measHistoryEmpty" style="display:none;">No data.</div>
     </div>
   </section>
 
@@ -459,6 +511,7 @@ document.getElementById('unitToggle').addEventListener('click', () => {
   localStorage.setItem(UNIT_KEY, units);
   updateUnitLabels();
   renderHistory();
+  renderMeasurements();
   renderStats();
 });
 updateUnitLabels();
@@ -471,6 +524,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById('section-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'history') renderHistory();
+    if (tab.dataset.tab === 'measurements') renderMeasurements();
     if (tab.dataset.tab === 'meals') renderMeals();
     if (tab.dataset.tab === 'stats') renderStats();
   });
@@ -613,6 +667,132 @@ function renderChart() {
       <span>${fmtDate(withWeight[withWeight.length-1].date)} · ${convWeight(withWeight[withWeight.length-1].weight).toFixed(1)} ${wUnit()}</span>
     </div>
   `;
+}
+
+// --- Measurements ---
+const MEAS_KEYS = ['m_neck','m_chest','m_waist','m_hips','m_thigh','m_calf','m_arm'];
+const MEAS_LABELS = { m_neck:'Neck', m_chest:'Chest', m_waist:'Waist', m_hips:'Hips', m_thigh:'Thigh', m_calf:'Calf', m_arm:'Arm' };
+const MEAS_COLORS = { m_neck:'#f48fb1', m_chest:'#ffb74d', m_waist:'#4dd0e1', m_hips:'#ce93d8', m_thigh:'#80cbc4', m_calf:'#a5d6a7', m_arm:'#ef9a9a' };
+
+function renderMeasurements() {
+  const entries = [...data.entries].sort((a,b) => a.date.localeCompare(b.date));
+  const withAny = entries.filter(e => MEAS_KEYS.some(k => e[k] !== undefined));
+  const empty = document.getElementById('measEmpty');
+  const histEmpty = document.getElementById('measHistoryEmpty');
+
+  if (withAny.length === 0) {
+    empty.style.display = 'block';
+    document.getElementById('measChart').innerHTML = '';
+    document.getElementById('measLegend').innerHTML = '';
+    document.querySelector('#measDeltaTable tbody').innerHTML = '';
+    document.getElementById('measHistoryWrap').innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // --- Multi-line chart ---
+  const svgW = 300; const svgH = 180; const pad = 14;
+  const chartW = svgW - pad*2; const chartH = svgH - pad*2;
+
+  // Gather all values across all keys to find global min/max for shared Y scale
+  let allVals = [];
+  MEAS_KEYS.forEach(k => withAny.forEach(e => { if (e[k] !== undefined) allVals.push(convLen(e[k])); }));
+  const globalMin = Math.min(...allVals);
+  const globalMax = Math.max(...allVals);
+  const globalRange = (globalMax - globalMin) || 1;
+
+  // X positions based on date index among entries that have any measurement
+  const xOf = (i) => pad + (withAny.length > 1 ? (i / (withAny.length - 1)) * chartW : chartW / 2);
+  const yOf = (val) => pad + chartH - ((convLen(val) - globalMin) / globalRange) * chartH;
+
+  let svgLines = '';
+  let legendHtml = '';
+
+  MEAS_KEYS.forEach(k => {
+    const pts = withAny.map((e, i) => e[k] !== undefined ? { x: xOf(i), y: yOf(e[k]), v: e[k] } : null).filter(Boolean);
+    if (pts.length === 0) return;
+    const color = MEAS_COLORS[k];
+    const polyPoints = pts.map(p => `${p.x},${p.y}`).join(' ');
+    svgLines += `<polyline points="${polyPoints}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    pts.forEach(p => {
+      svgLines += `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="${color}"/>`;
+    });
+    legendHtml += `<span style="font-size:12px; display:flex; align-items:center; gap:4px;">
+      <span style="width:12px; height:12px; border-radius:3px; background:${color}; flex-shrink:0;"></span>
+      ${MEAS_LABELS[k]}
+    </span>`;
+  });
+
+  // Y axis labels
+  const yLabels = [globalMin, (globalMin+globalMax)/2, globalMax].map(v => {
+    const y = yOf(v);
+    return `<text x="0" y="${y+4}" fill="#8a8f98" font-size="8" text-anchor="start">${convLen(v).toFixed(1)}</text>`;
+  }).join('');
+
+  document.getElementById('measChart').innerHTML = `
+    <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%; height:180px; overflow:visible;">
+      ${yLabels}
+      ${svgLines}
+    </svg>
+  `;
+  document.getElementById('measLegend').innerHTML = legendHtml;
+
+  // --- Delta table (first vs latest) ---
+  const tbody = document.querySelector('#measDeltaTable tbody');
+  tbody.innerHTML = '';
+  MEAS_KEYS.forEach(k => {
+    const withKey = withAny.filter(e => e[k] !== undefined);
+    if (withKey.length === 0) return;
+    const first = withKey[0];
+    const latest = withKey[withKey.length - 1];
+    const delta = latest[k] - first[k];
+    const dispDelta = convLen(delta);
+    const sign = delta > 0 ? '+' : '';
+    const cls = delta > 0 ? 'diff-pos' : (delta < 0 ? 'diff-neg' : '');
+    const color = MEAS_COLORS[k];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="display:flex; align-items:center; gap:6px;">
+        <span style="width:10px; height:10px; border-radius:2px; background:${color}; flex-shrink:0; display:inline-block;"></span>
+        ${MEAS_LABELS[k]}
+      </td>
+      <td>${convLen(first[k]).toFixed(1)} ${lUnit()}</td>
+      <td>${convLen(latest[k]).toFixed(1)} ${lUnit()}</td>
+      <td class="${cls}">${sign}${dispDelta.toFixed(1)} ${lUnit()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // --- Full history table ---
+  const presentKeys = MEAS_KEYS.filter(k => withAny.some(e => e[k] !== undefined));
+  const reversedEntries = [...withAny].reverse();
+  let histHtml = `<table style="width:100%; border-collapse:collapse; font-size:12px;">
+    <thead><tr>
+      <th style="text-align:left; color:var(--muted); padding:6px 4px; border-bottom:1px solid var(--border);">Date</th>
+      ${presentKeys.map(k => `<th style="text-align:right; color:${MEAS_COLORS[k]}; padding:6px 4px; border-bottom:1px solid var(--border);">${MEAS_LABELS[k]}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+  reversedEntries.forEach((entry, ri) => {
+    const chronIdx = withAny.findIndex(e => e.date === entry.date);
+    histHtml += `<tr>
+      <td style="text-align:left; padding:6px 4px; border-bottom:1px solid var(--border); white-space:nowrap;">${fmtDate(entry.date)}</td>
+      ${presentKeys.map(k => {
+        if (entry[k] === undefined) return `<td style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--border); color:var(--muted);">–</td>`;
+        // delta vs previous entry that has this key
+        const prevWithKey = withAny.slice(0, chronIdx).reverse().find(e => e[k] !== undefined);
+        let deltaHtml = '';
+        if (prevWithKey) {
+          const d = entry[k] - prevWithKey[k];
+          const sign = d > 0 ? '+' : '';
+          const cls = d > 0 ? 'diff-pos' : (d < 0 ? 'diff-neg' : '');
+          deltaHtml = ` <span class="${cls}" style="font-size:10px;">${sign}${convLen(d).toFixed(1)}</span>`;
+        }
+        return `<td style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--border);">${convLen(entry[k]).toFixed(1)}${deltaHtml}</td>`;
+      }).join('')}
+    </tr>`;
+  });
+  histHtml += '</tbody></table>';
+  document.getElementById('measHistoryWrap').innerHTML = histHtml;
 }
 
 // --- Entry detail modal ---
